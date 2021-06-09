@@ -10,10 +10,6 @@ Created on Mon Jun  7 17:47:14 2021
 import binance
 from binance.client import Client
 
-# import binance_f
-# from binance_f import RequestClient
-# import binance_f.model as futures_service
-
 import json 
 import datetime
 import pickle

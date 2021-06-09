@@ -10,8 +10,6 @@ Created on Sun Jun  6 17:11:30 2021
 import binance
 from binance.client import Client
 
-# from binance_f import RequestClient
-# import binance_f.model as futures_service
 import sys
 import os
 import json 
