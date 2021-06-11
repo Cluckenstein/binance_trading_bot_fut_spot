@@ -22,11 +22,14 @@ import numpy as np
 
 class live_bot(object):
     
-    def __init__(self, client,
+    def __init__(self, client_key,
+                 client_secret,
+                 bot_token,
+                 bot_id,
                  look_back = 15,
                  mini_ine = 10,
                  ine_limit_look_back = 0.01,
-                 ine_limit = 0.05,
+                 ine_limit = 0.035,
                  take_profit = 0.05,
                  stop_loss = -0.25,
                  window_length = 720,
@@ -36,7 +39,15 @@ class live_bot(object):
         
         # best [15, 10, 0.01, 0.05, 0.05, 720] @ [look_back, mini_ine , ine_limit_look_back ,ine_limit ,take_profit ,window_length]
 
-        self.client = client
+        self.client_key = client_key
+
+        self.client_secret = client_secret
+        
+        self.client = Client(self.client_key, self.client_secret)  
+        
+        self.bot_token = bot_token
+        
+        self.bot_id = bot_id
         
         self.look_back = look_back
         
@@ -88,45 +99,96 @@ class live_bot(object):
         
         message = 'INFORMATION\n'
         message += 'Trading Bot is live with the following settings\n'
-        message += 'Live for %i \n'%(live_minutes)
+        message += 'Live for %i mins.\n'%(live_minutes)
         message += 'Assets watched %s \n'%(str(self.symbols)[1:-1])
         message += 'Positions size $%.2f \n'%(self.position_size)
-        message += 'Take profit @ %.3f %%\n'%(self.take_profit*100)
-        message += 'Ineff. limit @ %.3f %%\n'%(self.ine_limit*100)
+        message += 'Take profit @ %.1f %%\n'%(self.take_profit*100)
+        message += 'Ineff. limit @ %.1f %%\n'%(self.ine_limit*100)
         message += 'Timestamp @ %s \n'%(str(datetime.datetime.now())[:-7])
-        bot.send_text(message)
+        bot.send_text(message, self.bot_token, self.bot_id)
         
              
         starting = time.time()
         old = 0
+        fluct_message = {k:0 for k in self.symbols}
+        old_run = 0
+
         while (time.time()-starting)/60 < live_minutes and self.keep_running:
+
+            if (time.time()-old_run) >= int(180):
+                print('running')
+                old_run = time.time()
             
-            if (time.time()-old) >= 300:
-                print('Running for %.2f minutes'%((time.time()-starting)/60))
+            if (time.time()-old) >= int(60*60*3):
+                run_min = round((time.time()-starting)/60)
+                hours = np.floor(run_min/60)
+                days = int(np.floor(hours/24))
+
+                print('Live for %i days %i hours'%(days, hours))
+                message = 'INFORMATION\nLive %i days %i hours'%(days, hours)
+                bot.send_text(message, self.bot_token, self.bot_id)
                 old = time.time()
+
+                self.reset_client()
+
             
             try:
-                self.check_open_orders()
+                self.check_open_orders() #connection error can occur 
             
-                spot_resposne = abs(time.time() - self.client.get_server_time()['serverTime']/1000)
-                fut_response = abs(time.time() - self.client.futures_coin_time()['serverTime']/1000)
+                try:
+                    spot_resposne = abs(time.time() - self.client.get_server_time()['serverTime']/1000)
+                    fut_response = abs(time.time() - self.client.futures_coin_time()['serverTime']/1000)
+                except:
+                    print('Connection error while getting pings')
+                    spot_resposne = 3.0
+                    fut_response = 3.0
+                    continue
                 
                 if spot_resposne + fut_response < 2.0:
                 
                     for pair in self.symbols:
 
                         if not self.is_open_orders[pair]:
+                            
+                            try:
     
-                            history_spot = self.client.get_klines(symbol = pair, interval = Client.KLINE_INTERVAL_1MINUTE, limit = self.look_back)
+                                history_spot = self.client.get_klines(symbol = pair, interval = Client.KLINE_INTERVAL_1MINUTE, limit = self.look_back) #connection error can occur 
+                                
+                                history_fut = self.client.futures_klines(symbol = pair, interval = Client.KLINE_INTERVAL_1MINUTE, limit = self.look_back) #connection error can occur 
+                                
+                            except:
+                                print('Connection error while getting klines')
+                                continue
                             
-                            history_fut = self.client.futures_klines(symbol = pair, interval = Client.KLINE_INTERVAL_1MINUTE, limit = self.look_back)
-                            
-            
-                            if sum([float(history_spot[max([-p, -len(history_spot)])][1])/float(history_fut[max([-p,-len(history_fut)])][1]) - 1  > self.ine_limit_look_back for p in range(1,min([len(history_spot), len(history_fut)]))]) >= self.mini_ine:
+                            min_len = min([len(history_spot), len(history_fut)])
+                            fluctuations_over_limit = [abs(float(history_spot[max([-p, -len(history_spot)])][1])/float(history_fut[max([-p,-len(history_fut)])][1]) - 1) > self.ine_limit_look_back for p in range(1,min_len)]
+                            flucts = sum(fluctuations_over_limit)
+
+                            """
+                            if pair == 'RSRUSDT':
+                                print([abs(float(history_spot[max([-p, -len(history_spot)])][1])/float(history_fut[max([-p,-len(history_fut)])][1]) - 1)*100 for p in range(1,min_len)])
+                                recent_spot =  self.client.get_recent_trades(symbol=pair, limit = 10)
+                                recent_fut = self.client.futures_recent_trades(symbol = pair, limit = 10)
+                        
+                                mark_spot = sum([float(k['price']) for k in recent_spot]) / 10 
+                                mark_fut = sum([float(k['price']) for k in recent_fut]) / 10 
+
+                                print(100*(mark_spot/ mark_fut -1))
+
+                            """
+
+                            if flucts > 0 and (time.time()-fluct_message[pair])/60>= 1.:
+                                fluct_message[pair] = time.time()
+                                print('INFORMATION\nFluctuations occuringr for %s\n%i fluctuation(s) detected\n%i is treshold'%(pair, int(flucts), int(self.mini_ine)))
+                                message = 'INFORMATION\nFluctuations occuringr for %s\n%i fluctuation(s) detected\n%i is treshold'%(pair, int(flucts), int(self.mini_ine))
+                                bot.send_text(message, self.bot_token, self.bot_id)
+
+
+                            if flucts >= self.mini_ine:
                                                                    
                                 recent_spot =  self.client.get_recent_trades(symbol=pair, limit = 10)
                                 recent_fut = self.client.futures_recent_trades(symbol = pair, limit = 10)
-                                
+                        
                                 mark_spot = sum([float(k['price']) for k in recent_spot]) / 10 
                                 mark_fut = sum([float(k['price']) for k in recent_fut]) / 10 
                                 
@@ -134,11 +196,9 @@ class live_bot(object):
                                 
                                 if diff > self.ine_limit:                           
                                     # buy future long leveraged 
-                                    # types ['LIMIT', 'MARKET', 'STOP', 'STOP_MARKET', 'TAKE_PROFIT', 'TAKE_PROFIT_MARKET', 'TRAILING_STOP_MARKET']
-                                    
+                                    # types ['LIMIT', 'MARKET', 'STOP', 'STOP_MARKET', 'TAKE_PROFIT', 'TAKE_PROFIT_MARKET', 'TRAILING_STOP_MARKET']                          
                                     quantity = np.round(self.position_size / mark_fut, self.precision[pair]['quantity'])
-                                    print(quantity)
-                                    
+                                           
                                     #buy leveraged pair 
                                     buy_order_response = self.client.futures_create_order(symbol=pair, side='BUY', type='MARKET', quantity = quantity)
                                     
@@ -168,20 +228,21 @@ class live_bot(object):
                                     message = 'INFORMATION\n'
                                     message += 'Position opened for %s \n'%(pair)
                                     message += 'Notional amount $ %s \n'%(str(np.round(float(opened_pos['notional']), 2)))
-                                    message += 'Ineff. difference %.3f \n'%(diff*100)
+                                    message += 'Ineff. difference %.3f %%\n'%(diff*100)
                                     message += 'Opened @ %.5f \n'%(entry_price)
                                     message += 'Take profit order @ %.5f \n'%(entry_price * (self.take_profit + 1))
+                                    message += 'Stop loss order @ %.5f \n'%(entry_price * (self.stop_loss + 1))
                                     message += 'Timestamp @ %s \n'%(str(datetime.datetime.fromtimestamp(open_timestamp)))
-                                    bot.send_text(message)
+                                    bot.send_text(message, self.bot_token, self.bot_id)
                                     
                                     self.is_open_orders[pair] = True
                                     
-                                    time.sleep(10)
+                                    
                                     
                 else:
-                    message = 'INFORMATION\n'%(pair)
+                    message = 'INFORMATION\n'
                     message += 'Binance servers are not responding in time'
-                    bot.send_text(message)
+                    bot.send_text(message, self.bot_token, self.bot_id)
                     
                 
             except Exception as e:
@@ -192,9 +253,12 @@ class live_bot(object):
                 message += 'There was a problem it raised is\n\n'
                 message += str(exc_type) +'\n'
                 message += 'Line %s \n'%(str(exc_tb.tb_lineno)) 
-                bot.send_text(message)
+                bot.send_text(message, self.bot_token, self.bot_id)
                 
                 self.keep_running = False
+
+        message = 'Turned of after %i days %i hours'%(days, hours)
+        bot.send_text(message, self.bot_token, self.bot_id)
                 
                                 
 
@@ -202,9 +266,18 @@ class live_bot(object):
         
     def check_open_orders(self):
         
-        open_positions =  self.client.futures_position_information()
+        try:
         
-        for pair in self.symbols:
+            open_positions =  self.client.futures_position_information() #connection error can occur 
+            temp_symbols = self.symbols.copy()
+        
+        except:
+            print('Connection error while getting future position info')
+            temp_symbols = []
+
+        
+        
+        for pair in temp_symbols:
             
             opened_pos = [k for k in open_positions if k['symbol']==pair][0]
             pos_quantity = np.round(float(opened_pos['positionAmt']), self.precision[pair]['quantity'])
@@ -213,7 +286,7 @@ class live_bot(object):
                 message = 'INFORMATION\n'
                 message += 'Position closed after Take Profit for %s \n'%(pair)
                 message += 'Timestamp @ %s \n'%(str(datetime.datetime.now()))
-                bot.send_text(message)
+                bot.send_text(message, self.bot_token, self.bot_id)
                 
                 self.is_open_orders[pair] = False
                 self.info_open_orders[pair] = None
@@ -231,14 +304,17 @@ class live_bot(object):
                     recent_fut = self.client.futures_recent_trades(symbol = pair, limit = 10)
                     mark_fut = sum([float(k['price']) for k in recent_fut]) / 10 
                     
-                    message = 'INFORMATION\n'%(pair)
+                    message = 'INFORMATION\n'
                     message += 'Position closed after timeout for %s \n'%(pair)
                     message += 'Closed @ %.5f \n'%(mark_fut)
                     message += 'PL is @ %.5f %% \n'%(100* (mark_fut/self.info_open_orders[pair]['entry_price']-1))
                     message += 'Timestamp @ %s \n'%(str(datetime.datetime.now()))
-                    bot.send_text(message)
+                    bot.send_text(message, self.bot_token, self.bot_id)
                 
                 
+    def reset_client(self):
+        self.client = None
+        self.client = Client(self.client_key, self.client_secret)   
 
     def adjust_leverage(self, symbol, lev = 5):
         _ = self.client.futures_change_leverage(symbol=symbol, leverage=lev)

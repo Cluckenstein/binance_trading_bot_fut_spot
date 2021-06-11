@@ -1,0 +1,4 @@
+python-binance
+numpy == 1.16.6
+datetime
+requests
