@@ -152,16 +152,60 @@ class live_bot(object):
                             
                             try:
     
-                                history_spot = self.client.get_klines(symbol = pair, interval = Client.KLINE_INTERVAL_1MINUTE, limit = self.look_back) #connection error can occur 
+                                history_spot = self.client.get_klines(symbol = pair, interval = Client.KLINE_INTERVAL_1MINUTE, limit = int(2*self.look_back)) #connection error can occur 
                                 
-                                history_fut = self.client.futures_klines(symbol = pair, interval = Client.KLINE_INTERVAL_1MINUTE, limit = self.look_back) #connection error can occur 
+                                history_fut = self.client.futures_klines(symbol = pair, interval = Client.KLINE_INTERVAL_1MINUTE, limit = int(2*self.look_back)) #connection error can occur 
                                 
                             except:
                                 print('Connection error while getting klines')
                                 continue
+  
+
+                            dates_spot = []
+                            for spot in history_spot:
+                                date = datetime.datetime.fromtimestamp(spot[0]/1000)
+                                spot[0] = datetime.datetime(date.year, date.month, date.day, date.hour, date.minute)
+                                dates_spot.append(spot[0])
+                                
                             
-                            min_len = min([len(history_spot), len(history_fut)])
-                            fluctuations_over_limit = [abs(float(history_spot[max([-p, -len(history_spot)])][1])/float(history_fut[max([-p,-len(history_fut)])][1]) - 1) > self.ine_limit_look_back for p in range(1,min_len)]
+                            dates_fut = []
+                            for fut in history_fut:
+                                date = datetime.datetime.fromtimestamp(fut[0]/1000)
+                                fut[0] = datetime.datetime(date.year, date.month, date.day, date.hour, date.minute)
+                                dates_fut.append(fut[0])
+                                
+                            
+                            
+                            if max(dates_fut) > max(dates_spot):    
+                                print('here fut candles are newer than spot candles')
+                                history_spot = [history_spot[-i-1].copy() for i in range(self.look_back)]
+                                
+                                max_indi_fut = [k for k in history_fut if k[0]<=max(dates_spot)]
+                                
+                                history_fut = [max_indi_fut[-i-1].copy() for i in range(self.look_back)] 
+                            
+                            elif max(dates_spot) > max(dates_fut):
+                                print('here spot candles are newer than fut candles')
+                                history_fut = [history_fut[-i-1].copy() for i in range(self.look_back)]
+                                
+                                max_indi_spot = [k for k in history_spot if k[0]<=max(dates_fut)]
+                                
+                                history_spot = [max_indi_spot[-i-1].copy() for i in range(self.look_back)] 
+                                
+                            elif max(dates_fut) == max(dates_spot):
+                                
+                                history_spot = [history_spot[-i-1].copy() for i in range(self.look_back)]
+                                history_fut = [history_fut[-i-1].copy() for i in range(self.look_back)]
+                                 
+                            else:
+                                print('Some thing went wrong with getting the candles and their datetimes')
+                                message = 'ATTENTION REQUIRED\n'
+                                message += 'Some thing went wrong with getting the candles and their datetimes'
+                                bot.send_text(message, self.bot_token, self.bot_id)
+                                continue
+                            
+                            
+                            fluctuations_over_limit = [abs(float(history_spot[-p][1])/float(history_fut[-p][1]) - 1) > self.ine_limit_look_back for p in range(1,self.look_back+1)]
                             flucts = sum(fluctuations_over_limit)
 
                             """
