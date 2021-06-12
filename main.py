@@ -46,4 +46,4 @@ trading_bot = api.live_bot(keys['key'], keys['secret'], bot_token, bot_id,
                              position_size = 6.0,)
 
 trading_bot.set_live(999999999)
-"""  
+"""

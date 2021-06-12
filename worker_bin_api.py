@@ -17,6 +17,7 @@ import datetime
 import telegram_bot_bin as bot
 import time 
 import numpy as np
+import string
 
 
 
@@ -25,7 +26,7 @@ class live_bot(object):
     def __init__(self, client_key,
                  client_secret,
                  bot_token,
-                 bot_id,
+                 bot_chat_id,
                  look_back = 15,
                  mini_ine = 10,
                  ine_limit_look_back = 0.01,
@@ -47,7 +48,7 @@ class live_bot(object):
         
         self.bot_token = bot_token
         
-        self.bot_id = bot_id
+        self.bot_chat_id = bot_chat_id
         
         self.look_back = look_back
         
@@ -92,6 +93,12 @@ class live_bot(object):
                 self.adjust_tye(pair)
             except:
                 None
+                
+        alp = string.ascii_uppercase + string.ascii_lowercase + '@#$%&*!?~'
+        cur = datetime.datetime.now()
+        
+        self.bot_id = alp[cur.year-2000] + alp[cur.month] + alp[cur.day] + alp[cur.hour] + alp[cur.minute]
+        
 
         
         
@@ -102,11 +109,12 @@ class live_bot(object):
         message += 'Live for %i min.\n'%(live_minutes)
         message += 'Assets watched %s \n'%(str(self.symbols)[1:-1])
         message += 'Positions size $%.2f \n'%(self.position_size)
-        message += 'Leverage $%i x\n'%(int(self.leverage)) 
+        message += 'Leverage %ix\n'%(int(self.leverage)) 
         message += 'Take profit @ %.1f %%\n'%(self.take_profit*100)
         message += 'Ineff. limit @ %.1f %%\n'%(self.ine_limit*100)
         message += 'Timestamp @ %s \n'%(str(datetime.datetime.now())[:-7])
-        bot.send_text(message, self.bot_token, self.bot_id)
+        message += 'Bot ID %s'%(self.bot_id)
+        bot.send_text(message, self.bot_token, self.bot_chat_id)
         
              
         starting = time.time()
@@ -126,8 +134,9 @@ class live_bot(object):
                 days = int(np.floor(hours/24))
 
                 print('Live for %i days %i hours'%(days, hours))
-                message = 'INFORMATION\nLive %i days %i hours'%(days, hours)
-                bot.send_text(message, self.bot_token, self.bot_id)
+                message = 'INFORMATION\nLive %i days %i hours\n'%(days, hours)
+                message += 'Bot ID %s'%(self.bot_id)
+                bot.send_text(message, self.bot_token, self.bot_chat_id)
                 old = time.time()
 
                 self.reset_client()
@@ -201,8 +210,9 @@ class live_bot(object):
                             else:
                                 print('Some thing went wrong with getting the candles and their datetimes')
                                 message = 'ATTENTION REQUIRED\n'
-                                message += 'Some thing went wrong with getting the candles and their datetimes'
-                                bot.send_text(message, self.bot_token, self.bot_id)
+                                message += 'Some thing went wrong with getting the candles and their datetimes\n'
+                                message += 'Bot ID %s'%(self.bot_id)
+                                bot.send_text(message, self.bot_token, self.bot_chat_id)
                                 continue
                             
                             
@@ -225,7 +235,8 @@ class live_bot(object):
                             if flucts > 0 and (time.time()-fluct_message[pair])/60>= 1.:
                                 fluct_message[pair] = time.time()
                                 print('INFORMATION\nFluctuations occuringr for %s\n%i fluctuation(s) detected\n%i is treshold'%(pair, int(flucts), int(self.mini_ine)))
-                                message = 'INFORMATION\nFluctuations occuringr for %s\n%i fluctuation(s) detected\n%i is treshold'%(pair, int(flucts), int(self.mini_ine))
+                                message = 'INFORMATION\nFluctuations occuringr for %s\n%i fluctuation(s) detected\n%i is treshold\n'%(pair, int(flucts), int(self.mini_ine))
+                                message += 'Bot ID %s'%(self.bot_id)
                                 bot.send_text(message, self.bot_token, self.bot_id)
 
 
@@ -278,7 +289,8 @@ class live_bot(object):
                                     message += 'Take profit order @ %.5f \n'%(entry_price * (self.take_profit + 1))
                                     message += 'Stop loss order @ %.5f \n'%(entry_price * (self.stop_loss + 1))
                                     message += 'Timestamp @ %s \n'%(str(datetime.datetime.fromtimestamp(open_timestamp)))
-                                    bot.send_text(message, self.bot_token, self.bot_id)
+                                    message += 'Bot ID %s'%(self.bot_id)
+                                    bot.send_text(message, self.bot_token, self.bot_chat_id)
                                     
                                     self.is_open_orders[pair] = True
                                     
@@ -287,7 +299,7 @@ class live_bot(object):
                 else:
                     message = 'INFORMATION\n'
                     message += 'Binance servers are not responding in time'
-                    bot.send_text(message, self.bot_token, self.bot_id)
+                    bot.send_text(message, self.bot_token, self.bot_chat_id)
                     
                 
             except Exception as e:
@@ -298,12 +310,14 @@ class live_bot(object):
                 message += 'There was a problem it raised is\n\n'
                 message += str(exc_type) +'\n'
                 message += 'Line %s \n'%(str(exc_tb.tb_lineno)) 
-                bot.send_text(message, self.bot_token, self.bot_id)
+                message += 'Bot ID %s'%(self.bot_id)
+                bot.send_text(message, self.bot_token, self.bot_chat_id)
                 
                 self.keep_running = False
 
-        message = 'Turned of after %i days %i hours'%(days, hours)
-        bot.send_text(message, self.bot_token, self.bot_id)
+        message = 'Turned of after %i days %i hours\n'%(days, hours)
+        message += 'Bot ID %s'%(self.bot_id)
+        bot.send_text(message, self.bot_token, self.bot_chat_id)
                 
                                 
 
@@ -331,7 +345,8 @@ class live_bot(object):
                 message = 'INFORMATION\n'
                 message += 'Position closed after Take Profit for %s \n'%(pair)
                 message += 'Timestamp @ %s \n'%(str(datetime.datetime.now()))
-                bot.send_text(message, self.bot_token, self.bot_id)
+                message += 'Bot ID %s'%(self.bot_id)
+                bot.send_text(message, self.bot_token, self.bot_chat_id)
                 
                 self.is_open_orders[pair] = False
                 self.info_open_orders[pair] = None
@@ -354,7 +369,8 @@ class live_bot(object):
                     message += 'Closed @ %.5f \n'%(mark_fut)
                     message += 'PL is @ %.5f %% \n'%(100* (mark_fut/self.info_open_orders[pair]['entry_price']-1))
                     message += 'Timestamp @ %s \n'%(str(datetime.datetime.now()))
-                    bot.send_text(message, self.bot_token, self.bot_id)
+                    message += 'Bot ID %s'%(self.bot_id)
+                    bot.send_text(message, self.bot_token, self.bot_chat_id)
                 
                 
     def reset_client(self):
