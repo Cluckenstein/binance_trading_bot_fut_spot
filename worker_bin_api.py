@@ -31,11 +31,11 @@ class live_bot(object):
                  ine_limit_look_back = 0.01,
                  ine_limit = 0.035,
                  take_profit = 0.05,
-                 stop_loss = -0.25,
+                 stop_loss = -0.20,
                  window_length = 720,
                  symbols = ['RSRUSDT', 'LINKUSDT', 'BTCUSDT', 'ETHUSDT'],
-                 position_size = 10.0,
-                 leverage = 3):
+                 position_size = 15.0,
+                 leverage = 4):
         
         # best [15, 10, 0.01, 0.05, 0.05, 720] @ [look_back, mini_ine , ine_limit_look_back ,ine_limit ,take_profit ,window_length]
 
