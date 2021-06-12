@@ -98,8 +98,8 @@ class live_bot(object):
     def set_live(self, live_minutes):
         
         message = 'INFORMATION\n'
-        message += 'Trading Bot is live with the following settings\n'
-        message += 'Live for %i mins.\n'%(live_minutes)
+        message += 'Trading Bot is live\n'
+        message += 'Live for %i min.\n'%(live_minutes)
         message += 'Assets watched %s \n'%(str(self.symbols)[1:-1])
         message += 'Positions size $%.2f \n'%(self.position_size)
         message += 'Take profit @ %.1f %%\n'%(self.take_profit*100)

@@ -6,6 +6,7 @@ __pycache__/
 # all secrets 
 *.json
 *.pickle
+*.sh
 
 # C extensions
 *.so
