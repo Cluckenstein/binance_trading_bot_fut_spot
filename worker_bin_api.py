@@ -81,7 +81,7 @@ class live_bot(object):
             pair_info = [k for k in info if k['symbol']==pair][0]
             self.precision[pair] = {'price': pair_info['pricePrecision'], 'quantity': pair_info['quantityPrecision']}
             
-        
+        self.leverage = leverage
 
         for pair in self.symbols:
             try:
@@ -102,6 +102,7 @@ class live_bot(object):
         message += 'Live for %i min.\n'%(live_minutes)
         message += 'Assets watched %s \n'%(str(self.symbols)[1:-1])
         message += 'Positions size $%.2f \n'%(self.position_size)
+        message += 'Leverage $%i x\n'%(int(self.leverage)) 
         message += 'Take profit @ %.1f %%\n'%(self.take_profit*100)
         message += 'Ineff. limit @ %.1f %%\n'%(self.ine_limit*100)
         message += 'Timestamp @ %s \n'%(str(datetime.datetime.now())[:-7])
