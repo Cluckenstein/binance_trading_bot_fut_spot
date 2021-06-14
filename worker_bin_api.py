@@ -116,7 +116,6 @@ class live_bot(object):
         message += 'Bot ID %s'%(self.bot_id)
         bot.send_text(message, self.bot_token, self.bot_chat_id)
         
-             
         starting = time.time()
         old = 0
         fluct_message = {k:0 for k in self.symbols}
@@ -128,13 +127,15 @@ class live_bot(object):
                 print('running')
                 old_run = time.time()
             
-            if (time.time()-old) >= int(60*60*3):
+            if (time.time()-old) >= int(60*60*8):
                 run_min = round((time.time()-starting)/60)
                 hours = np.floor(run_min/60)
                 days = int(np.floor(hours/24))
 
-                print('Live for %i days %i hours'%(days, hours))
-                message = 'INFORMATION\nLive %i days %i hours\n'%(days, hours)
+                hour=hours%24
+
+                print('Live for %i day(s) %i hours'%(days, hour))
+                message = 'INFORMATION\nLive %i day(s) %i hours\n'%(days, hour)
                 message += 'Bot ID %s'%(self.bot_id)
                 bot.send_text(message, self.bot_token, self.bot_chat_id)
                 old = time.time()
