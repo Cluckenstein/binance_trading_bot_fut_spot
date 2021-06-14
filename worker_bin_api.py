@@ -34,7 +34,7 @@ class live_bot(object):
                  take_profit = 0.05,
                  stop_loss = -0.20,
                  window_length = 720,
-                 symbols = ['RSRUSDT', 'LINKUSDT', 'BTCUSDT', 'ETHUSDT'],
+                 symbols = ['RSRUSDT', 'LINKUSDT', 'BTCUSDT', 'ETHUSDT', 'DOGEUSDT'],
                  position_size = 15.0,
                  leverage = 4):
         
