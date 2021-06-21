@@ -10,10 +10,10 @@ import json
 import worker_bin_api as api
 
 
-with open('secret.json','rb') as f:
+with open('conf/secret.json','rb') as f:
     keys = json.load(f)
     
-with open('telegram_secret.json','rb') as f:
+with open('conf/telegram_secret.json','rb') as f:
     tele_keys = json.load(f)
     
 bot_token = tele_keys['secret']

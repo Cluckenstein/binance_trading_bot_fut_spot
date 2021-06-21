@@ -9,17 +9,17 @@ Created on Sun Jun  6 17:11:28 2021
 import matplotlib.pyplot as plt 
 import pickle
 import numpy as np 
-
+import datetime
 
 pair_list = ['RSRUSDT', 'LINKUSDT', 'BTCUSDT', 'ETHUSDT']
     
-with open('history_4_5_6'+str(pair_list)+'.pickle', 'rb') as handle:
+with open('history_14-19_6'+str(pair_list)+'.pickle', 'rb') as handle:
     coin_hist = pickle.load(handle)
 
 look_back = 15 #min of time in which minimum of 'mini_ine' must be over 'ine_limit'
 mini_ine = 10
 ine_limit_look_back = 0.01
-ine_limit = 0.05
+ine_limit = 0.035
 take_profit = 0.05
 window_length = 720
 
@@ -35,6 +35,7 @@ window_length = 720
             # zahl += 1
 endi = []
 
+dates = {k:[] for k in pair_list}
 
 for pair in pair_list:
     minutes_observed = min([len(coin_hist[pair]['spot']), len(coin_hist[pair]['fut'])])
@@ -54,7 +55,10 @@ for pair in pair_list:
         
         
         if sum([float(coin_hist[pair]['spot'][max([i-p,0])][1])/float(coin_hist[pair]['fut'][max([i-p,0])][1]) -1  > ine_limit_look_back for p in range(1,look_back)]) >=mini_ine:
+            
             if diff > ine_limit:
+                dates[pair].append(datetime.datetime.fromtimestamp(coin_hist[pair]['spot'][i][0]/1000))
+                
                 # buy future long leveraged 
                 minute_returns = [float(coin_hist[pair]['fut'][min([i+k,minutes_observed-1])][1])/open_fut - 1  for k in range(1,window_length)]
 
