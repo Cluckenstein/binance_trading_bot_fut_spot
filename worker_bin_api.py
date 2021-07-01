@@ -90,7 +90,7 @@ class live_bot(object):
             except:
                 None
             try:
-                self.adjust_tye(pair)
+                self.adjust_type(pair)
             except:
                 None
                 
