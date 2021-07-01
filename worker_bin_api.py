@@ -83,7 +83,7 @@ class live_bot(object):
             self.precision[pair] = {'price': pair_info['pricePrecision'], 'quantity': pair_info['quantityPrecision']}
             
         self.leverage = leverage
-
+    
         for pair in self.symbols:
             try:
                 self.adjust_leverage(pair, lev = leverage)
@@ -108,7 +108,7 @@ class live_bot(object):
         message += 'Trading Bot is live\n'
         message += 'Live for %i min.\n'%(live_minutes)
         message += 'Assets watched %s \n'%(str(self.symbols)[1:-1])
-        message += 'Positions size $%.2f \n'%(self.position_size)
+        message += 'Positions size %i x $%.2f \n'%(int(self.leverage), self.position_size)
         message += 'Leverage %ix\n'%(int(self.leverage)) 
         message += 'Take profit @ %.1f %%\n'%(self.take_profit*100)
         message += 'Ineff. limit @ %.1f %%\n'%(self.ine_limit*100)
@@ -254,7 +254,7 @@ class live_bot(object):
                                 if diff > self.ine_limit:                           
                                     # buy future long leveraged 
                                     # types ['LIMIT', 'MARKET', 'STOP', 'STOP_MARKET', 'TAKE_PROFIT', 'TAKE_PROFIT_MARKET', 'TRAILING_STOP_MARKET']                          
-                                    quantity = np.round(self.position_size / mark_fut, self.precision[pair]['quantity'])
+                                    quantity = np.round(self.leverage * self.position_size / mark_fut, self.precision[pair]['quantity'])
                                            
                                     #buy leveraged pair 
                                     buy_order_response = self.client.futures_create_order(symbol=pair, side='BUY', type='MARKET', quantity = quantity)
